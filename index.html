@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>伊丹とLINE</title>
+<style>
+:root{--bg:#7d9cc4;--bar:#f7f7f7;--txt:#222;--sub:#666;--me:#8de055;--him:#fff;--sys:#ffffffcc;--card:#fff;--accent:#e8457a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c2533;--bar:#222a36;--txt:#eee;--sub:#aab;--me:#4f9c3a;--him:#2f3846;--sys:#00000066;--card:#2a3342}}
+:root[data-theme="dark"]{--bg:#1c2533;--bar:#222a36;--txt:#eee;--sub:#aab;--me:#4f9c3a;--him:#2f3846;--sys:#00000066;--card:#2a3342}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+#app{height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+header{background:var(--bar);padding:8px 14px;display:flex;align-items:center;gap:10px}
+.av{width:36px;height:36px;border-radius:50%;background:#f4a;display:grid;place-items:center;color:#fff;font-weight:700;flex:none}
+header b{display:block;font-size:15px}
+.meter{flex:1}
+.meter small{font-size:11px;color:var(--sub);display:flex;justify-content:space-between}
+.bar{height:10px;border-radius:6px;background:#8884;overflow:hidden;margin-top:2px}
+#fill{height:100%;width:15%;background:linear-gradient(90deg,#4cc38a,#f2c94c,#e8457a);background-size:520px 100%;transition:width .5s}
+#chat{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:6px;align-items:flex-end}
+.row.me{justify-content:flex-end}
+.b{max-width:72%;padding:8px 12px;border-radius:16px;font-size:15px;line-height:1.5;background:var(--him);word-break:break-all}
+.me .b{background:var(--me);color:#111}
+.read{font-size:10px;color:#fff;opacity:.8;align-self:flex-end}
+.sys{align-self:center;background:var(--sys);color:#fff;font-size:12px;padding:3px 10px;border-radius:10px}
+.av.s{width:28px;height:28px;font-size:12px}
+.typing{opacity:.7}
+.b.kill{background:#d90f1f;color:#fff;font-weight:700}
+#back,#sback{font-size:30px;line-height:1;cursor:pointer;padding:0 8px 4px 0;color:var(--txt);user-select:none}
+#sub{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:var(--bg);display:none;flex-direction:column;z-index:10;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#sbody{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.ct{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border-bottom:1px solid #8883;cursor:pointer}
+.fc{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+#tmw{height:5px;background:var(--bar)}#tm{height:100%;width:0;background:var(--accent)}
+#choices{background:var(--bar);padding:10px;display:flex;flex-direction:column;gap:6px;min-height:20px}
+#choices button,.btn{font:inherit;font-size:14px;padding:10px 12px;border-radius:12px;border:1px solid #8886;background:var(--card);color:var(--txt);text-align:left;cursor:pointer}
+#choices button:active{background:var(--me)}
+#over{position:fixed;inset:0;background:#000d;display:none;place-items:center;padding:20px;z-index:20}
+#over .card{background:var(--card);border-radius:18px;padding:24px;text-align:center;max-width:340px}
+#over h2{margin:0 0 8px;font-size:26px;color:var(--accent)}
+#over p{margin:6px 0 16px;font-size:14px;line-height:1.6;color:var(--sub)}
+.btn{background:var(--accent)!important;color:#fff!important;border:0!important;text-align:center!important;font-weight:700}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<div id="back" onclick="goBack()">‹</div>
+<div class="av">伊</div>
+<div><b>伊丹</b><small style="color:var(--sub)">オンライン</small></div>
+<div class="meter"><small><span>えろえり度</span><span id="pct">15%</span></small><div class="bar"><div id="fill"></div></div></div>
+</header>
+<div id="chat"></div>
+<div id="tmw"><div id="tm"></div></div>
+<div id="choices"></div>
+</div>
+<div id="sub"><header><div id="sback" onclick="subBack()">‹</div><b id="stitle">トーク</b></header><div id="sbody"></div><div id="schoices" style="background:var(--bar);padding:10px;display:none"></div></div>
+<div id="over"><div class="card"><h2 id="ot"></h2><p id="op"></p><button class="btn" onclick="start()">もう一回やる</button></div></div>
+<script>
+const KILL="えりさんや そんなに愛を 欲しいのかい わかりましたよ 今言います";
+const S=[
+["おつかれ〜。今なにしてた？",[["お風呂上がりでダラダラしてた",15,"へえ…お風呂上がりか。ふーん"],["仕事終わって帰ってきたとこ",-5,"えらい！おつかれさま"],["ひみつ",10,"気になるじゃん、それ"]]],
+["今日えりさんの夢見たんだよね",[["どんな夢？",20,"それはさすがに言えない笑"],["こわ、忘れて",-10,"ひどい笑 でも忘れない"],["夢の中の私に謝っといて",5,"謝るようなことしたの？笑"]]],
+["今度の週末、空いてる？",[["空いてるよ！二人で行こ♡",25,"え、いいの？デートじゃん"],["友達と予定あるんだ",-10,"そっか、楽しんで〜"],["みんなで行くなら行く",-5,"じゃあ誰か誘うか"]]],
+["さっきの写真、かわいかった",[["でしょ？もっと送ろうか？",25,"お願いします（即答）"],["ありがとう、猫がね",-8,"猫もかわいかった笑"],["どれのこと？",3,"最後に送ってくれたやつ"]]],
+["寒くなってきたね。あっためてほしいな",[["毛布かぶって寝な",-10,"つめたい笑"],["ぎゅーしてあげよっか",30,"…今のもう一回言って"],["ホッカイロ貼りな",-5,"現実的すぎる"]]],
+["ねえ、えりさんって好きな人いるの？",[["いるよ。誰だと思う？",25,"…おれ？って言ったら引く？"],["今は仕事が恋人",-5,"それはそれで心配"],["伊丹はどうなの？",12,"さあ、どうだろね"]]],
+["もう夜遅いね。まだ起きてる？",[["起きてるよ、まだ話してたい",20,"そんなこと言われたら寝れない"],["もう寝るね、おやすみ",-15,"おやすみ。いい夢見てね"],["明日早いなら寝な",-8,"優しいな〜"]]],
+["電話していい？声聞きたい",[["いいよ、今かけて",30,"やば、緊張してきた"],["LINEがいいな",-5,"了解、文字でも十分たのしい"],["明日の昼ならいいよ",-3,"健全だ…わかった"]]],
+["えりさん、スタンプ送って",[["ハートのスタンプ",20,"ハート来た…保存した"],["ねこのスタンプ",-8,"かわいい、癒された"],["（既読スルー）",15,"…既読ついてるんだけど笑"]]],
+["さっき「会いたい」って打って消した",[["消さなくてよかったのに",30,"じゃあもう一回打つ…"],["何を打ってるの笑",-3,"ごめん、忘れて"],["疲れてるんだよ",-8,"そうかも、寝るわ"]]],
+["えりさんの好きなとこ、10個言える",[["言ってみて",22,"まず笑顔、声、あとは…"],["10個もある？笑",-2,"ある。じっくり聞く？"],["私は伊丹の短所10個言う",-12,"それは勘弁して"]]]
+];
+const $=id=>document.getElementById(id);
+let meter,turn,order,busy;
+const TURNS=11,DRIFT=1,TRUE_MAX=40;
+let tmr,cold=0;
+const scale=d=>d>0?Math.round(d*0.7):Math.round(d/3);
+function startTimer(){let t=80;$("tm").style.width="100%";tmr=setInterval(()=>{t--;$("tm").style.width=(t/80*100)+"%";if(t<=0){clearInterval(tmr);pick(["",0,"…既読ついてるのに、返事ないね"],true)}},100)}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function add(who,t){const r=document.createElement("div");r.className="row "+who;
+ if(who==="him")r.innerHTML='<div class="av s">伊</div>';
+ const b=document.createElement("div");b.className="b";b.textContent=t;
+ if(who==="me"){const rd=document.createElement("span");rd.className="read";rd.textContent="既読";r.appendChild(rd)}
+ r.appendChild(b);$("chat").appendChild(r);$("chat").scrollTop=1e5;return r}
+function sys(t){const d=document.createElement("div");d.className="sys";d.textContent=t;$("chat").appendChild(d)}
+function setMeter(v,show){meter=Math.max(0,v);const p=Math.min(100,meter);const hide=false;$("fill").style.width=hide?"0%":p+"%";$("pct").textContent=hide?"???":p+"%"}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+async function him(t,k){const ty=add("him","…");ty.classList.add("typing");await wait(700);ty.remove();const r=add("him",t);if(k)r.querySelector(".b").classList.add("kill")}
+function start(){$("over").style.display="none";$("chat").innerHTML="";$("choices").innerHTML="";
+ clearInterval(tmr);rescue=false;$("sub").style.display="none";cold=0;order=shuffle(S).slice(0,TURNS);turn=0;busy=false;setMeter(15);sys("今日（返信は8秒以内）");next(true)}
+async function next(first){
+ if(turn>=TURNS)return end(true);
+ busy=true;$("choices").innerHTML="";
+ if(first)await him("こんばんは、えりさん");
+ await him(order[turn][0]);
+ const box=$("choices");
+ shuffle(order[turn][1]).forEach(c=>{const b=document.createElement("button");b.textContent=c[0];b.onclick=()=>pick(c);box.appendChild(b)});
+ busy=false;startTimer()}
+async function pick(c,forced){
+ if(busy&&!forced)return;busy=true;clearInterval(tmr);$("choices").innerHTML="";$("tm").style.width="0";
+ let d,extra=false;
+ if(forced){d=10;cold=0;sys("既読スルーしてしまった…")}
+ else{add("me",c[0]);d=scale(c[1]);if(c[1]<0){cold++;if(cold>=3){d+=3;extra=true}}else cold=0}
+ await wait(400);
+ setMeter(meter+d+DRIFT);
+ await him(c[2]);
+ if(extra&&meter<100)await him("…なんか冷たくない？さみしいんだけど");
+ if(meter>=100){await wait(500);await him(KILL,true);await wait(1500);return end(false)}
+ turn++;
+ if(turn<TURNS&&meter>=70)sys("伊丹の様子がおかしい…");
+ next()}
+function end(win){
+ const o=$("over");
+ clearInterval(tmr);setMeter(meter,true);
+ if(!win){$("ot").textContent="BAD END";$("op").textContent="伊丹がついに言ってしまった。えろえり度100%。"}
+ else if(meter<=TRUE_MAX){startRescue();return}
+ else{$("ot").textContent="NORMAL END";$("op").textContent="生き延びたけど、えろえり度は "+meter+"%。TRUE ENDは "+TRUE_MAX+"%以下で完走しないと見られない。"}
+ o.style.display="grid"}
+let rescue=false,sview="list",fcur=null;
+const FR={"やまの":["#e07a3a","ユナイテッドザクザク持って今から行くわ"],"かける":["#3a8ee0","ごめん、今ちょっと手離せない…"],"のこさん":["#b05ad8","え、なになに？…ごめん会議始まる！"],"しらすさん":["#2bb3a3",""],"こうへい":["#d8b02b","ドンマイ！なんとかなるって！"],"はるまき":["#e0508a","草"]};
+async function startRescue(){busy=true;$("choices").innerHTML="";await wait(1500);await him("岡山県の事業所形態は寮を希望しているのですが、仕事内容などを教えて教えて頂きたいです。");rescue=true}
+function goBack(){if(!rescue){sys("（今は伊丹とのトーク中…戻れない）");$("chat").scrollTop=1e5;return}showList();$("sub").style.display="flex"}
+function subBack(){if(sview==="chat")showList();else $("sub").style.display="none"}
+function showList(){sview="list";$("stitle").textContent="トーク";$("schoices").style.display="none";const b=$("sbody");b.innerHTML="";Object.keys(FR).forEach(n=>{const d=document.createElement("div");d.className="ct";d.innerHTML='<div class="av" style="background:'+FR[n][0]+'">'+n[0]+'</div><b></b>';d.querySelector("b").textContent=n;d.onclick=()=>openFriend(n);b.appendChild(d)})}
+function fadd(who,t){const r=document.createElement("div");r.className="row "+who;if(who==="him")r.innerHTML='<div class="av s" style="background:'+FR[fcur][0]+'">'+fcur[0]+'</div>';if(who==="me"){const rd=document.createElement("span");rd.className="read";rd.textContent="既読";r.appendChild(rd)}const b=document.createElement("div");b.className="b";b.textContent=t;r.appendChild(b);$("fc").appendChild(r);$("fc").scrollTop=1e5}
+function openFriend(n){sview="chat";fcur=n;$("stitle").textContent=n;$("sbody").innerHTML='<div class="fc" id="fc"></div>';const c=$("schoices");c.style.display="flex";c.style.flexDirection="column";c.innerHTML="";const bt=document.createElement("button");bt.className="btn";bt.textContent="助けて";bt.onclick=()=>sendHelp(n);c.appendChild(bt)}
+async function sendHelp(n){const c=$("schoices");c.innerHTML="";fadd("me","助けて");await wait(1000);if(FR[n][1])fadd("him",FR[n][1]);else{const s=document.createElement("div");s.className="sys";s.textContent="既読がついただけだった…";$("fc").appendChild(s)}if(n==="やまの"){await wait(1400);trueEnd()}}
+function trueEnd(){rescue=false;$("sub").style.display="none";$("ot").textContent="TRUE END";$("op").textContent="ユナイテッドザクザクを携えたやまのが駆けつけた。伊丹の危機（？）は去った。あなたは真の勝者。";$("over").style.display="grid"}
+start();
+</script>
+</body>
+</html>
